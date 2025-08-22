@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#0A1018">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="icon" type="image/png" href="assets/icon-192.png">
+  <link rel="icon" type="image/png" href="assets/Skyx_Favicon.png">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="stylesheet" href="styles.css">
   <script defer src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.min.js"></script>
@@ -26,9 +26,7 @@
   </header>
 
   <main>
-    <section id="dropzone" class="dropzone">
-      <div class="dz-text"><strong>Drag & Drop</strong> photos here or use <em>Choose Photos</em>. <button id="importBtn" class="btn small">Import from Photos</button></div>
-    </section>
+    <!-- Dropzone removed -->
     <section id="grid" class="grid"></section>
   </main>
 
@@ -67,7 +65,9 @@
       <div class="caption-box">
         <div class="caption-header">
           <span>Caption (optimized for IG)</span>
-          <div class="caption-actions"><button id="copyCaption" class="btn small">Copy</button></div>
+          <div class="caption-actions">
+            <button id="copyCaption" class="btn small">Copy</button>
+          </div>
           <div style="display:flex;gap:8px;align-items:center;">
             <label class="input small" style="display:flex;gap:6px;align-items:center;">
               <span style="opacity:.75">Tags:</span>
