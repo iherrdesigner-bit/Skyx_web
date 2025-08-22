@@ -5,6 +5,7 @@ function showToast(msg='Copied'){toast.textContent=msg;toast.classList.remove('h
 
 // DOM
 const fileInput=document.getElementById('fileInput');
+const fileInputVisible=document.getElementById('fileInputVisible');
 const grid=document.getElementById('grid');
 const panel=document.getElementById('panel');
 const closePanel=document.getElementById('closePanel');
@@ -54,6 +55,7 @@ function bytesToSize(bytes){if(bytes===0)return'0 B';const k=1024,sizes=['B','KB
 function createCard(item, idx){const card=document.createElement('div');card.className='card';const img=document.createElement('img');img.loading='lazy';img.src=item.url;const label=document.createElement('div');label.className='label';label.textContent=item.file.name;card.appendChild(img);card.appendChild(label);card.addEventListener('click',()=>openPanel(idx));return card;}
 
 async function handleFiles(fileList){
+  if(!fileList || fileList.length===0){ showToast('Нет выбранных файлов'); return; }
   const arr = Array.from(fileList || []);
   let processed = 0;
   for (const file of arr){
@@ -390,3 +392,7 @@ async function getPixelSeedAndStats(url){
   });
 }
 
+
+fileInputVisible?.addEventListener('change', e => handleFiles(e.target.files));
+
+addBtn?.addEventListener('click', ()=>{ try{ fileInput.click(); }catch(e){} });

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Skyx — Local Captioner · v0.4.9</title>
+  <title>Skyx — Local Captioner · v0.5.0</title>
   <meta name="color-scheme" content="dark">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0A1018">
@@ -17,11 +17,9 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">Skyx — Local Captioner · v0.4.9</div>
+    <div class="brand">Skyx — Local Captioner · v0.5.0</div>
     <div class="actions">
-      <label for="fileInput" class="btn">Choose Photos</label>
-      <button id="addBtn" class="btn">Add Photos</button>
-      <input id="fileInput" type="file" accept="image/*,image/heic,image/heif,.jpg,.jpeg,.png" multiple class="visually-hidden" onchange="handleFiles(this.files)" />
+      <input id="fileInputVisible" type="file" accept="image/*" multiple class="btn" /><button id="addBtn" class="btn">Add Photos</button><input id="fileInput" type="file" accept="image/*" multiple class="visually-hidden" onchange="handleFiles(this.files)" />
       <button id="clearBtn" class="btn btn-ghost">Clear</button>
     </div>
   </header>
