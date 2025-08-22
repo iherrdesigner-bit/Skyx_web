@@ -1,4 +1,5 @@
 // Toast
+function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
 const toast = document.getElementById('toast');
 function showToast(msg='Copied'){toast.textContent=msg;toast.classList.remove('hidden');toast.classList.add('show');setTimeout(()=>{toast.classList.remove('show');toast.classList.add('hidden');},1200);}
 
@@ -30,10 +31,20 @@ const saveTxtBtn=document.getElementById('saveTxt');
 const tagModeEl=document.getElementById('tagMode');
 
 // Prompt
-const translateBtn2=document.getElementById('translateBtn2');
-const ltEndpointEl2=document.getElementById('ltEndpoint2');
-const promptRU2=document.getElementById('promptRU2');
-const promptEN2=document.getElementById('promptEN2');
+
+// New user-driven description fields
+const ltEndpoint = document.getElementById('ltEndpoint');
+const userDescRU = document.getElementById('userDescRU');
+const userDescEN = document.getElementById('userDescEN');
+const captionFinal = document.getElementById('captionFinal');
+const captionSuggested = document.getElementById('captionSuggested');
+const proposedBox = document.getElementById('proposedBox');
+const copyFinalBtn = document.getElementById('copyFinal');
+
+const translateBtn2=null;
+const ltEndpointEl2=null;
+const promptRU2=null;
+const promptEN2=null;
 
 let items=[];
 const seenFiles = new Set();
@@ -94,7 +105,7 @@ async function openPanel(idx){
   const t = await analyzeTone(it.url); mtone.textContent = t.tone; const st = await getPixelSeedAndStats(it.url); it._cats = st.cats;
   makeOptimizedCaption({tone:t.tone}, it).then(v=>captionEl.value=v);
   hashtagsEl.value = (tagModeEl.value==='engagement') ? generateHashtagsEngagement({}, it) : generateHashtags({}, it);
-  panel.classList.remove('hidden'); panel.setAttribute('aria-hidden','false');
+  panel.classList.remove('hidden'); panel.setAttribute('aria-hidden','false'); updateFromUserDebounced();
 }
 
 function analyzeTone(url){return new Promise((resolve)=>{const img=new Image();img.crossOrigin='anonymous';img.onload=()=>{const canvas=document.createElement('canvas');const w=64,h=64;canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,w,h);const data=ctx.getImageData(0,0,w,h).data;let sum=0,cool=0,warm=0;for(let i=0;i<data.length;i+=4){const r=data[i],g=data[i+1],b=data[i+2];const y=0.2126*r+0.7152*g+0.0722*b;sum+=y;if(b>r+10)cool++; if(r>g+10&&r>b+10)warm++;}const avg=sum/(w*h);let tone='balanced';if(avg<70)tone='low-light/moody';else if(avg>180)tone='bright/airy';if(cool>warm&&avg<140)tone+=' · cool'; else if(warm>cool&&avg<140)tone+=' · warm';resolve({avg,tone});};img.src=url;});}
@@ -141,7 +152,7 @@ function normalizeWord(w){
   return (w||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 }
 function extractKeywordsFromUser(){
-  const en = (document.getElementById('promptEN2')?.textContent||'').toLowerCase();
+  const en = (document.getElementById('userDescEN')?.textContent||'').toLowerCase();
   const words = en.split(/\s+/).map(normalizeWord).filter(Boolean);
   const stop = new Set(["the","and","a","an","of","to","in","on","with","by","for","is","are","this","that","it","at","as","from","into","about","over","under","between"]);
   const freq = {};
@@ -232,6 +243,73 @@ async function translateRuToEn(text, endpoint){const url=(endpoint&&endpoint.tri
 translateBtn2?.addEventListener('click', async ()=>{const ru=(promptRU2?.value||'').trim(); if(!ru){showToast('Введите текст'); return;} const en=await translateRuToEn(ru, ltEndpointEl2?.value||''); promptEN2.textContent=en||'—'; const it=items.find(x=>x.url===preview.src); makeOptimizedCaption({userEN:en, tone:(mtone.textContent||'')}, it).then(v=>captionEl.value=v); hashtagsEl.value = (tagModeEl.value==='engagement') ? generateHashtagsEngagement({userEN:en}, it) : generateHashtags({userEN:en}, it); showToast('Translated & generated');});
 
 tagModeEl?.addEventListener('change',()=>{const it=items.find(x=>x.url===preview.src); if(!it)return; hashtagsEl.value = (tagModeEl.value==='engagement') ? generateHashtagsEngagement({}, it) : generateHashtags({}, it);});
+
+async function translateAuto(text){
+  const ep = (ltEndpoint?.value||'').trim();
+  if (!text) return '';
+  if (!ep) return text; // no endpoint: use as-is
+  try{
+    const res = await fetch(ep, {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({q:text, source:'ru', target:'en', format:'text'})});
+    if (!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    return data.translatedText || '';
+  }catch(e){
+    console.warn('Translate failed', e);
+    return text;
+  }
+}
+
+function buildFinalFromUser(userEN, tone){
+  // IG-optimized assembly from user seed
+  let hook = (userEN||'').split(/[.!?]/)[0].trim();
+  if (hook.length > 125) hook = hook.slice(0,122).trim().replace(/\W+$/,'')+'…';
+  if (hook.length < 24) {
+    hook = hook + (hook ? ' — ' : '') + (tone.includes('low-light')?'soft night':'thin light');
+  }
+  const bodiesLow=[
+    "Quiet shadows, measured breathing, a frame that holds its breath.",
+    "Low light, slow steps, details stitched from hush."
+  ];
+  const bodiesBright=[
+    "Clean air, crisp lines, light carving space with intent.",
+    "Sunlit clarity, edges ringing like glass."
+  ];
+  const bodiesBalanced=[
+    "Stillness between movements, shaped by light and timing.",
+    "Composed pause, detail settling into place."
+  ];
+  const body = tone.includes('low-light') ? bodiesLow[0] : tone.includes('bright') ? bodiesBright[0] : bodiesBalanced[0];
+  const cta = buildCTA();
+  return hook + "\\n" + body + "\\n" + cta;
+}
+
+const updateFromUserDebounced = debounce(async ()=>{
+  const ru = (userDescRU?.value||'').trim();
+  if (!preview?.src) return;
+  if (ru){
+    const en = await translateAuto(ru);
+    userDescEN.textContent = en || '—';
+    const tone = (mtone.textContent||'balanced');
+    const it = items.find(x=>x.url===preview.src);
+    const fin = buildFinalFromUser(en, tone);
+    captionFinal.value = fin;
+    proposedBox?.classList.add('hidden');
+  } else {
+    // No user text → show proposed
+    proposedBox?.classList.remove('hidden');
+    const it = items.find(x=>x.url===preview.src);
+    makeOptimizedCaption({tone:(mtone.textContent||'balanced')}, it).then(v=>{
+      captionSuggested.value = v;
+      captionFinal.value = v; // default to proposed for convenience
+    });
+    userDescEN.textContent = '—';
+  }
+}, 400);
+
+userDescRU?.addEventListener('input', updateFromUserDebounced);
+copyFinalBtn?.addEventListener('click', ()=> copyToClipboard(captionFinal.value||''));
+
 
 
 // === Varied caption (seeded, tone-aware) ===

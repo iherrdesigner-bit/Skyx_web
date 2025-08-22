@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Skyx — Local Captioner · v0.4.7</title>
+  <title>Skyx — Local Captioner · v0.4.8</title>
   <meta name="color-scheme" content="dark">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0A1018">
@@ -17,7 +17,7 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">Skyx — Local Captioner · v0.4.7</div>
+    <div class="brand">Skyx — Local Captioner · v0.4.8</div>
     <div class="actions">
       <label for="fileInput" class="btn">Choose Photos</label>
       <input id="fileInput" type="file" accept="image/*,image/heic,image/heif,.jpg,.jpeg,.png" multiple class="visually-hidden" onchange="handleFiles(this.files)" />
@@ -37,29 +37,34 @@
     </div>
     <div class="panel-body">
       <img id="preview" alt="preview" class="preview"/>
+      
       <div class="prompt-box under-photo">
         <div class="caption-header">
-          <span>Prompt (RU) → EN</span>
+          <span>Your description (RU) → optimized EN</span>
           <div class="caption-actions">
-            <input id="ltEndpoint2" class="input small" placeholder="LibreTranslate URL (optional)" />
-            <button id="translateBtn2" class="btn small">Translate → Generate</button>
+            <input id="ltEndpoint" class="input small" placeholder="LibreTranslate URL (optional for RU→EN, leave empty to use as-is)" />
           </div>
         </div>
-        <textarea id="promptRU2" rows="3" spellcheck="false" placeholder="Опиши кадр по-русски..."></textarea>
-        <div class="kv" style="margin-top:6px;"><span>English:</span><b id="promptEN2">—</b></div>
+        <textarea id="userDescRU" rows="3" spellcheck="false" placeholder="Опиши кадр своими словами на русском..."></textarea>
+        <div class="kv" style="margin-top:6px;"><span>English:</span><b id="userDescEN">—</b></div>
       </div>
 
-      <div class="meta">
-        <div class="kv"><span>File</span><b id="m-filename">—</b></div>
-        <div class="kv"><span>Size</span><b id="m-size">—</b></div>
-        <div class="kv"><span>Resolution</span><b id="m-res">—</b></div>
-        <div class="kv"><span>ISO</span><b id="m-iso">—</b></div>
-        <div class="kv"><span>Exposure</span><b id="m-expo">—</b></div>
-        <div class="kv"><span>Aperture</span><b id="m-ap">—</b></div>
-        <div class="kv"><span>Focal</span><b id="m-fl">—</b></div>
-        <div class="kv"><span>Date</span><b id="m-date">—</b></div>
-        <div class="kv"><span>GPS</span><b id="m-gps">—</b></div>
-        <div class="kv"><span>Tone</span><b id="m-tone">—</b></div>
+      <div class="caption-box">
+        <div class="caption-header">
+          <span>Final caption (auto-optimized)</span>
+          <div class="caption-actions">
+            <button id="copyFinal" class="btn small">Copy</button>
+          </div>
+          <span id="hookCount" style="font-size:12px;opacity:.75">hook 0/125</span>
+        </div>
+        <textarea id="captionFinal" rows="4" spellcheck="false" placeholder="Здесь появится оптимизированная подпись..."></textarea>
+      </div>
+
+      <div class="caption-box" id="proposedBox">
+        <div class="caption-header">
+          <span>Proposed caption (if you leave the field above empty)</span>
+        </div>
+        <textarea id="captionSuggested" rows="3" spellcheck="false" readonly></textarea>
       </div>
 
       <div class="caption-box">
