@@ -103,7 +103,7 @@ function analyzeTone(url){return new Promise((resolve)=>{const img=new Image();i
 function buildHook(ctx,tone){const seed=(ctx&&ctx.userEN?ctx.userEN.trim():"")||"A moment where light slows the world down";let hook=seed.split(/[.!?]/)[0].trim();if(hook.length<24)hook="Cinematic pause in the "+(tone.includes("low-light")?"dark":"light");if(hook.length>125)hook=hook.slice(0,122).trim().replace(/\\W+$/,'')+"…";return hook;}
 function buildBody(tone){if(tone.includes("low-light"))return"Quiet shadows, measured breathing, a frame that holds its breath.";if(tone.includes("bright"))return"Clean air, crisp lines, light carving space with intent.";return"Stillness between movements, shaped by light and timing.";}
 function buildCTA(){return"What stays with you in this frame?";}
-function makeOptimizedCaption(ctx,item){const tone=(ctx&&ctx.tone)|| (mtone.textContent||"balanced");const hook=buildHook(ctx,tone);const body=buildBody(tone);const cta=buildCTA();const out=hook+"\\n"+body+"\\n"+cta;const hc=document.getElementById('hookCount');if(hc)hc.textContent=`hook ${hook.length}/125`;return out;}
+function makeOptimizedCaption(ctx,item){const tone=(ctx&&ctx.tone)|| (mtone.textContent||"balanced");const hook=buildHook2(ctx,tone,item);const body=buildBody2(tone,item);const cta=buildCTA();const out=hook+"\\n"+body+"\\n"+cta;const hc=document.getElementById('hookCount');if(hc)hc.textContent=`hook ${hook.length}/125`;return out;}
 
 function generateHashtags(ctx,item){const hf=["#photography","#cinematicphotography","#visualstory","#moodytones","#lightandshadow","#colorgrading","#bokeh","#storytelling","#creativephoto","#cinematic"];const ex=item.exif||{};const tone=(mtone.textContent||"").toLowerCase();let lf=[];if(tone.includes("low-light"))lf.push("lowlight","nightshots","softshadows");if(tone.includes("bright"))lf.push("cleanlook","brighttones");const fnum=ex.FNumber||ex.fNumber; if(typeof fnum==='number' && fnum<=2.0) lf.push("shallowdepth"); const fl=ex.FocalLength; if(typeof fl==='number'){ if(fl<=24)lf.push("wideangle"); else if(fl>=80)lf.push("telephoto"); else lf.push("standardlens"); } lf=Array.from(new Set(lf)).slice(0,14).map(t=>"#"+t); const all=[...hf.slice(0,14),...lf].slice(0,28); while(all.length<28)all.push("#visualstory"); return all.join(" ");}
 function generateHashtagsEngagement(ctx,item){const baseHF=["photography","cinematicphotography","visualstory","moodytones","lightandshadow"];const hf=Array.from(new Set(baseHF)).slice(0,4).map(t=>"#"+t);let lf=generateHashtags(ctx,item).split(/\\s+/).filter(t=>!hf.includes(t) && !["#photooftheday","#instaphoto","#composition","#cinematic"].includes(t));const all=Array.from(new Set([...hf,...lf])).slice(0,10);while(all.length<8)all.push("#visualstory");return all.join(" ");}
@@ -118,3 +118,42 @@ async function translateRuToEn(text, endpoint){const url=(endpoint&&endpoint.tri
 translateBtn2?.addEventListener('click', async ()=>{const ru=(promptRU2?.value||'').trim(); if(!ru){showToast('Введите текст'); return;} const en=await translateRuToEn(ru, ltEndpointEl2?.value||''); promptEN2.textContent=en||'—'; const it=items.find(x=>x.url===preview.src); captionEl.value = makeOptimizedCaption({userEN:en, tone:(mtone.textContent||'')}, it); hashtagsEl.value = (tagModeEl.value==='engagement') ? generateHashtagsEngagement({userEN:en}, it) : generateHashtags({userEN:en}, it); showToast('Translated & generated');});
 
 tagModeEl?.addEventListener('change',()=>{const it=items.find(x=>x.url===preview.src); if(!it)return; hashtagsEl.value = (tagModeEl.value==='engagement') ? generateHashtagsEngagement({}, it) : generateHashtags({}, it);});
+
+
+// === Varied caption (seeded, tone-aware) ===
+function seededRandom(seed){ let t = seed % 2147483647; if (t <= 0) t += 2147483646; return function(){ return (t = t * 16807 % 2147483647) / 2147483647; }; }
+function getSeedFromItem(item){ const a = (item?.file?.size||0) ^ (item?.file?.lastModified||0) ^ (item?.width||0) ^ (item?.height||0); return a>>>0; }
+function pickFrom(arr, rnd){ return arr[Math.floor(rnd()*arr.length)]; }
+
+function buildHook2(ctx,tone,item){
+  const seed = getSeedFromItem(item); const rnd = seededRandom(seed);
+  const user = (ctx && ctx.userEN ? ctx.userEN.trim() : "");
+  if (user) {
+    let hook = user.split(/[.!?]/)[0].trim();
+    if (hook.length > 125) hook = hook.slice(0,122).trim().replace(/\W+$/,'')+"…";
+    if (hook.length < 24) hook = hook + " — " + pickFrom(["held breath","thin light","soft edges","quiet frame"], rnd);
+    return hook;
+  }
+  const cool = tone.includes('cool'), warm = tone.includes('warm');
+  const low = tone.includes('low-light'), bright = tone.includes('bright');
+  const hooksLow = ["Night folds into a quiet frame","Where shadows breathe a little slower","Silence gathers in the corners of light","Soft darkness, still pulse"];
+  const hooksBright = ["Light carves the day into clean lines","Air so clear it hums","Edges sharpen where the sun lands","The day opens like a lens"];
+  const hooksBalanced = ["A moment where light slows the world down","Time leans on the frame and rests","Between beats, the image begins","Calm held in passing light"];
+  let pool = hooksBalanced; if (low) pool = hooksLow; if (bright) pool = hooksBright;
+  let hook = pickFrom(pool, rnd);
+  if (cool) hook += " • cool";
+  if (warm) hook += " • warm";
+  if (hook.length > 125) hook = hook.slice(0,122).trim().replace(/\W+$/,'')+"…";
+  return hook;
+}
+
+function buildBody2(tone,item){
+  const seed = getSeedFromItem(item); const rnd = seededRandom(seed+7);
+  const bodiesLow=["Quiet shadows, measured breathing, a frame that holds its breath.","Low light, slow steps, details stitched from hush.","Dim edges, steady heart, motion turning into memory."];
+  const bodiesBright=["Clean air, crisp lines, light carving space with intent.","Sunlit clarity, edges ringing like glass.","Bright air, easy focus, the day drawn in bold."];
+  const bodiesBalanced=["Stillness between movements, shaped by light and timing.","Composed pause, detail settling into place.","A calm hinge between before and after."];
+  if (tone.includes('low-light')) return pickFrom(bodiesLow, rnd);
+  if (tone.includes('bright')) return pickFrom(bodiesBright, rnd);
+  return pickFrom(bodiesBalanced, rnd);
+}
+
