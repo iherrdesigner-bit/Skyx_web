@@ -43,7 +43,31 @@ function bytesToSize(bytes){if(bytes===0)return'0 B';const k=1024,sizes=['B','KB
 
 function createCard(item, idx){const card=document.createElement('div');card.className='card';const img=document.createElement('img');img.loading='lazy';img.src=item.url;const label=document.createElement('div');label.className='label';label.textContent=item.file.name;card.appendChild(img);card.appendChild(label);card.addEventListener('click',()=>openPanel(idx));return card;}
 
-async function handleFiles(fileList){const arr=[...fileList].filter(f=>f.type.startsWith('image/'));for(const file of arr){const url=URL.createObjectURL(file);const dim=await getImageSize(url);let exif={};try{exif=await exifr.parse(file,{tiff:true,ifd1:true,exif:true,gps:true,xmp:true});}catch(e){exif={};}const item={file,url,width:dim.width,height:dim.height,exif};items.push(item);const card=createCard(item,items.length-1);grid.appendChild(card);}}
+async function handleFiles(fileList){
+  const list = Array.from(fileList || []);
+  let processed = 0;
+  for (const file of list){
+    const name = (file && file.name) ? file.name.toLowerCase() : '';
+    const byExt = /\.(jpg|jpeg|png|heic|heif|gif|webp)$/i.test(name);
+    const byType = file && file.type && file.type.startsWith('image/');
+    if (!byExt && !byType) {
+      // skip non-images
+      continue;
+    }
+    const url = URL.createObjectURL(file);
+    const dim = await getImageSize(url);
+    let exif = {};
+    try { exif = await exifr.parse(file,{tiff:true,ifd1:true,exif:true,gps:true,xmp:true}); } catch(e){ exif = {}; }
+    const item = { file, url, width: dim.width, height: dim.height, exif };
+    items.push(item);
+    const card = createCard(item, items.length - 1);
+    grid.appendChild(card);
+    processed++;
+  }
+  if (processed === 0) {
+    showToast('Не удалось загрузить фото. Попробуй другое JPG/PNG.');
+  }
+}
 
 function getImageSize(url){return new Promise((resolve)=>{const img=new Image();img.onload=()=>resolve({width:img.naturalWidth,height:img.naturalHeight});img.src=url;});}
 

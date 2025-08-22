@@ -20,7 +20,7 @@
     <div class="brand">Skyx — Local Captioner</div>
     <div class="actions">
       <label for="fileInput" class="btn">Choose Photos</label>
-      <input id="fileInput" type="file" accept="image/*,image/heic,image/heif" multiple class="visually-hidden" />
+      <input id="fileInput" type="file" accept="image/*,image/heic,image/heif,.jpg,.jpeg,.png" multiple class="visually-hidden" onchange="handleFiles(this.files)" />
       <button id="clearBtn" class="btn btn-ghost">Clear</button>
     </div>
   </header>
