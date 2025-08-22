@@ -122,3 +122,39 @@ translateBtn2?.addEventListener('click', async ()=>{const ru=(promptRU2?.value||
 
 // Hashtag mode toggle
 tagModeEl?.addEventListener('change',()=>{const it=items.find(x=>x.url===preview.src); if(!it)return; hashtagsEl.value = (tagModeEl.value==='engagement') ? generateHashtagsEngagement({}, it) : generateHashtags({}, it);});
+
+
+// ===== Clipboard helpers (works in iOS Safari/PWA) =====
+async function copyToClipboard(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      showToast('Copied');
+      return true;
+    }
+  } catch(e) { /* fallback below */ }
+  // Fallback: select hidden textarea and execCommand
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try {
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast(ok ? 'Copied' : 'Copy failed');
+    return ok;
+  } catch (e) {
+    document.body.removeChild(ta);
+    showToast('Copy failed');
+    return false;
+  }
+}
+
+
+const copyCaptionBtn = document.getElementById('copyCaption');
+copyCaptionBtn?.addEventListener('click', () => { copyToClipboard(captionEl.value || ''); });
+copyTagsBtn?.addEventListener('click', () => { copyToClipboard(hashtagsEl.value || ''); });
