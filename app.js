@@ -135,24 +135,75 @@ async function makeOptimizedCaption(ctx,item){
 }
 
 
+
+// === HF/LF hashtag mixing (28 total in 'reach' mode) ===
+function normalizeWord(w){
+  return (w||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+}
+function extractKeywordsFromUser(){
+  const en = (document.getElementById('promptEN2')?.textContent||'').toLowerCase();
+  const words = en.split(/\s+/).map(normalizeWord).filter(Boolean);
+  const stop = new Set(["the","and","a","an","of","to","in","on","with","by","for","is","are","this","that","it","at","as","from","into","about","over","under","between"]);
+  const freq = {};
+  for (const w of words){ if(!stop.has(w) && w.length>2){ freq[w]=(freq[w]||0)+1; } }
+  return Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([w])=>w);
+}
+
 function generateHashtags(ctx,item){
   const ex=item.exif||{};
-  const baseCore=["photography","visualstory","storytelling","creativephoto"];
-  const tone=(mtone.textContent||"").toLowerCase();
   const cats=(item._cats||[]);
+  const tone=(mtone.textContent||"").toLowerCase();
+  const mode = (document.getElementById('tagMode')?.value)||'engagement';
 
-  const topical=[];
-  if (cats.includes('sky/water')) topical.push("sky","bluesky","waterscape","seascape");
-  if (cats.includes('nature/green')) topical.push("nature","green","forest","field","outdoor");
-  if (cats.includes('warm/city/sunset')) topical.push("citylights","neon","sunset","dusk","nightcity");
-  if (cats.includes('monochrome')) topical.push("monochrome","bnw","blackandwhite");
+  // High-frequency pool (broad reach)
+  const HFcore = ["photography","cinematicphotography","visualstory","storytelling","creativephoto","moodytones","lightandshadow","bokeh","colorgrading","cinematic","photogram","photooftheday","artofvisuals","igphoto"];
+  // Topical boosters by category
+  const HFtopic = [];
+  if (cats.includes('sky/water')) HFtopic.push("landscape","seascape","bluesky");
+  if (cats.includes('nature/green')) HFtopic.push("nature","outdoor","earthtones");
+  if (cats.includes('warm/city/sunset')) HFtopic.push("cityscape","streetphotography","neon");
+  if (cats.includes('monochrome')) HFtopic.push("bnw","blackandwhite","monochrome");
 
-  if (tone.includes("low-light")) topical.push("lowlight","nightshots");
-  if (tone.includes("bright")) topical.push("brighttones","cleanair");
-
-  const lens=[];
+  // Low-frequency pool (niche/context)
+  const LF = [];
+  const userKeys = extractKeywordsFromUser(); // from RU->EN prompt if provided
+  LF.push(...userKeys.map(k=>k)); // will become #k
+  if (tone.includes("low-light")) LF.push("lowlight","nightshots","noirvibes");
+  if (tone.includes("bright")) LF.push("brighttones","cleanair","sunlit");
   const fl = ex.FocalLength;
-  if (typeof fl==='number'){ if(fl<=24) lens.push("wideangle"); else if(fl>=80) lens.push("telephoto"); else lens.push("standardlens"); }
+  if (typeof fl==='number'){ if(fl<=24) LF.push("wideangle"); else if(fl>=80) LF.push("telephoto"); else LF.push("standardlens"); }
+  const fnum = ex.FNumber||ex.fNumber; if (typeof fnum==='number' && fnum<=2.0) LF.push("shallowdepth");
+
+  // Compose per mode
+  let tags=[];
+  if (mode==='engagement'){
+    // concise set 8–10
+    tags = [
+      ...new Set([
+        ...HFcore.slice(0,5),
+        ...(HFtopic.slice(0,2)),
+        ...(tone.includes("low-light")?["lowlight"]:[]),
+        ...(tone.includes("bright")?["brighttones"]:[]),
+        ...(userKeys.slice(0,2))
+      ])
+    ];
+    if (tags.length<8) tags.push("visualpoetry","framestory");
+    tags = tags.slice(0,10);
+  } else {
+    // reach: 14 HF + 14 LF
+    const HFmix = Array.from(new Set([...HFcore, ...HFtopic])).slice(0,20);
+    const LFniche = Array.from(new Set(LF));
+    const hf = HFmix.slice(0,14);
+    const lf = (LFniche.length>=14) ? LFniche.slice(0,14) : [...LFniche, ..."filmlook moodyurban softpalette slowmoment citynights openhorizon quietscene nearfocus farfocus streetsilence softlight gentlecontrast".split(" ")].slice(0,14);
+    tags = [...hf, ...lf];
+  }
+
+  // Final formatting
+  tags = Array.from(new Set(tags)).map(t=>t.startsWith('#')?t:'#'+t);
+  const maxLen = mode==='reach' ? 28 : 10;
+  return tags.slice(0, maxLen).join(' ');
+}
+
   const fnum = ex.FNumber||ex.fNumber; if (typeof fnum==='number' && fnum<=2.0) lens.push("shallowdepth");
 
   let tags = [];
