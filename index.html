@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0A1018">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Local Photo Captioner — Web MVP</title>
+  <link rel="stylesheet" href="styles.css" />
+  <meta name="color-scheme" content="dark light">
+  <!-- EXIF reader (client-side only). For fully offline usage, replace CDN with a local copy of exifr.full.umd.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.min.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><img src="assets/icon.svg" alt="Skyx" style="height:20px;vertical-align:middle;margin-right:8px;">Skyx — Local Captioner</div>
+    <div class="actions">
+      <label class="btn">
+        <input id="fileInput" type="file" accept="image/*" multiple hidden/>
+        Choose Photos
+      </label>
+      <button id="clearBtn" class="btn btn-ghost">Clear</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="dropzone" class="dropzone">
+      <div class="dz-text">
+        <strong>Drag & Drop</strong> photos here or click <em>Choose Photos</em> above
+      </div>
+    </section>
+
+    <section id="grid" class="grid"></section>
+  </main>
+
+  <aside id="panel" class="panel hidden" aria-hidden="true">
+    <div class="panel-header">
+      <div class="panel-title">Details</div>
+      <button id="closePanel" class="icon-btn" title="Close">✕</button>
+    </div>
+    
+    <div class="panel-body">
+      <div class="prompt-box">
+        <div class="caption-header">
+          <span>Prompt (RU) → EN</span>
+          <div class="caption-actions">
+            <input id="ltEndpoint" class="input small" placeholder="LibreTranslate URL (optional)" />
+            <button id="translateBtn" class="btn small">Translate → Generate</button>
+          </div>
+        </div>
+        <textarea id="promptRU" rows="3" spellcheck="false" placeholder="Опиши кадр по-русски..."></textarea>
+        <div class="kv" style="margin-top:6px;"><span>English:</span><b id="promptEN">—</b></div>
+      </div>
+
+      <img id="preview" alt="preview" class="preview"/>
+      <div class="prompt-box under-photo">
+        <div class="caption-header">
+          <span>Prompt (RU) → EN</span>
+          <div class="caption-actions">
+            <input id="ltEndpoint2" class="input small" placeholder="LibreTranslate URL (optional)" />
+            <button id="translateBtn2" class="btn small">Translate → Generate</button>
+          </div>
+        </div>
+        <textarea id="promptRU2" rows="3" spellcheck="false" placeholder="Опиши кадр по-русски..."></textarea>
+        <div class="kv" style="margin-top:6px;"><span>English:</span><b id="promptEN2">—</b></div>
+      </div>
+
+      <div class="meta">
+        <div class="kv"><span>File</span><b id="m-filename">—</b></div>
+        <div class="kv"><span>Size</span><b id="m-size">—</b></div>
+        <div class="kv"><span>Resolution</span><b id="m-res">—</b></div>
+        <div class="kv"><span>Camera</span><b id="m-camera">—</b></div>
+        <div class="kv"><span>Lens</span><b id="m-lens">—</b></div>
+        <div class="kv"><span>Exposure</span><b id="m-expo">—</b></div>
+        <div class="kv"><span>ISO</span><b id="m-iso">—</b></div>
+        <div class="kv"><span>Date</span><b id="m-date">—</b></div>
+        <div class="kv"><span>GPS</span><b id="m-gps">—</b></div>
+        <div class="kv"><span>Brightness</span><b id="m-bright">—</b></div>
+        <div class="kv"><span>Tone</span><b id="m-tone">—</b></div>
+      </div>
+
+      <div class="caption-box">
+        <div class="caption-header">
+          <span>Caption (promo style)</span>
+          <div class="caption-actions">
+            <button id="regenCaption" class="btn btn-ghost small">Regenerate</button>
+            <button id="copyCaption" class="btn small">Copy</button>
+          </div>
+        </div>
+        <textarea id="caption" rows="4" spellcheck="false"></textarea>
+      </div>
+
+      <div class="caption-box">
+        <div class="caption-header">
+          <span>28 Hashtags (14 HF + 14 LF, EN)</span>
+          <div class="caption-actions">
+            <button id="regenTags" class="btn btn-ghost small">Regenerate</button>
+            <button id="copyTags" class="btn small">Copy</button>
+          </div>
+        </div>
+        <textarea id="hashtags" rows="3" spellcheck="false"></textarea>
+      </div>
+
+      <div class="footer-actions">
+        <button id="saveTxt" class="btn wide">Save .txt</button>
+      </div>
+    </div>
+  </aside>
+
+  <div id="toast" class="toast hidden">Copied</div>
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(console.error);
+    });
+  }
+  </script>
+</body>
+</html>
